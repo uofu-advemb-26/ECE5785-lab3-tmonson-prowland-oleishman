@@ -1,6 +1,6 @@
 # This is the main binary. List your C files here.
-add_executable(hello_freertos
-    hello_freertos.c
+add_executable(threads
+    threads.c
     )
 
 pico_set_program_name(hello_freertos "test")
@@ -12,7 +12,7 @@ pico_enable_stdio_uart(hello_freertos 1)
 pico_enable_stdio_usb(hello_freertos 0)
 
 # Add the libraries to the build
-target_link_libraries(hello_freertos PRIVATE
+target_link_libraries(threads PRIVATE
   pico_stdlib
   pico_multicore
   pico_async_context_freertos
@@ -34,5 +34,5 @@ pico_add_extra_outputs(hello_freertos)
 find_program(OPENOCD openocd)
 find_program(PICOTOOL picotool)
 
-add_custom_target(flash ${PICOTOOL} load -f $<TARGET_FILE:hello_freertos> DEPENDS hello_freertos)
-add_custom_target(openocd_flash ${OPENOCD} -s ${OPENOCD_PATH} -f interface/cmsis-dap.cfg -f target/rp2040.cfg -c 'adapter speed 5000' -c program "$<TARGET_FILE:hello_freertos>" verify reset exit' DEPENDS hello_freertos)
+add_custom_target(flash ${PICOTOOL} load -f $<TARGET_FILE:threads> DEPENDS threads)
+add_custom_target(openocd_flash ${OPENOCD} -s ${OPENOCD_PATH} -f interface/cmsis-dap.cfg -f target/rp2040.cfg -c 'adapter speed 5000' -c program "$<TARGET_FILE:threads>" verify reset exit' DEPENDS threads)
