@@ -7,10 +7,52 @@
 #include <FreeRTOS.h>
 #include <semphr.h>
 
+#include "testedFuncs.h"
+
+int counter;
+int on;
+SemaphoreHandle_t semaphore;
+
 void setUp(void) {
 }
 
 void tearDown(void) {
+}
+
+void test_setup() {
+}
+
+void test_mainThread() {
+  semaphore = xSemaphoreCreateCounting(1, 1);
+  counter = 0;
+  on = 0;
+
+  TEST_ASSERT_TRUE_MESSAGE(main_thread_func(&counter, &on, &semaphore) ==
+                               true,
+                           "Main thread failed to take semaphore.");
+
+  TEST_ASSERT_TRUE_MESSAGE(counter == 1,
+                           "Main thread didn't increment count.");
+
+  TEST_ASSERT_TRUE_MESSAGE(on == 1, "Main thread didn't toggle 'on'.");
+}
+
+void test_mainThreadSemaphore() {
+  semaphore = xSemaphoreCreateCounting(1, 1);
+  counter = 0;
+  on = 0;
+
+  TEST_ASSERT_TRUE_MESSAGE(xSemaphoreTake(semaphore, 0) == pdTRUE,
+                           "Tester failed to setup semaphore.");
+
+  TEST_ASSERT_TRUE_MESSAGE(main_thread_func(&counter, &on, &semaphore) ==
+                               false,
+                           "Main Thread still took the semaphore.");
+
+  TEST_ASSERT_TRUE_MESSAGE(counter == 0,
+                           "Main thread still incremented count.");
+
+  TEST_ASSERT_TRUE_MESSAGE(on == 0, "Main thread still toggled 'on'.");
 }
 
 void test_variable_assignment() {
@@ -34,6 +76,8 @@ int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_variable_assignment);
     RUN_TEST(test_multiplication);
+    RUN_TEST(test_mainThread);
+    RUN_TEST(test_mainThreadSemaphore);
     sleep_ms(5000);
     UNITY_END();
   }
