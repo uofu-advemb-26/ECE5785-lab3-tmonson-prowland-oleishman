@@ -55,6 +55,31 @@ void test_mainThreadSemaphore() {
   TEST_ASSERT_TRUE_MESSAGE(on == 0, "Main thread still toggled 'on'.");
 }
 
+void test_sideThread() {
+  semaphore = xSemaphoreCreateCounting(1, 1);
+  counter = 0;
+
+  TEST_ASSERT_TRUE_MESSAGE(side_thread_func(&counter, &semaphore) == true,
+                           "Side thread failed to take semaphore.");
+
+  TEST_ASSERT_TRUE_MESSAGE(counter == 1,
+                           "Side thread didn't increment count.");
+}
+
+void test_sideThreadSemaphore() {
+  semaphore = xSemaphoreCreateCounting(1, 1);
+  counter = 0;
+
+  TEST_ASSERT_TRUE_MESSAGE(xSemaphoreTake(semaphore, 0) == pdTRUE,
+                           "Tester failed to setup semaphore.");
+
+  TEST_ASSERT_TRUE_MESSAGE(side_thread_func(&counter, &semaphore) == false,
+                           "Side Thread still took the semaphore.");
+
+  TEST_ASSERT_TRUE_MESSAGE(counter == 0,
+                           "Side thread still incremented count.");
+}
+
 void test_variable_assignment() {
   int x = 1;
   TEST_ASSERT_TRUE_MESSAGE(x == 1, "Variable assignment failed.");
@@ -74,10 +99,15 @@ int main(void) {
     sleep_ms(5000); // Give time for TTY to attach.
     printf("Start tests\n");
     UNITY_BEGIN();
+
     RUN_TEST(test_variable_assignment);
     RUN_TEST(test_multiplication);
+
     RUN_TEST(test_mainThread);
     RUN_TEST(test_mainThreadSemaphore);
+
+    RUN_TEST(test_sideThread);
+    RUN_TEST(test_sideThreadSemaphore);
     sleep_ms(5000);
     UNITY_END();
   }
