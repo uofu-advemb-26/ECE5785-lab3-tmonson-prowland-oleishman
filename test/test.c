@@ -27,7 +27,7 @@ void test_mainThread() {
   counter = 0;
   on = 0;
 
-  TEST_ASSERT_TRUE_MESSAGE(main_thread_func(&counter, &on, &semaphore) ==
+  TEST_ASSERT_TRUE_MESSAGE(main_thread_func(&counter, &on, semaphore, 0) ==
                                true,
                            "Main thread failed to take semaphore.");
 
@@ -45,7 +45,7 @@ void test_mainThreadSemaphore() {
   TEST_ASSERT_TRUE_MESSAGE(xSemaphoreTake(semaphore, 0) == pdTRUE,
                            "Tester failed to setup semaphore.");
 
-  TEST_ASSERT_TRUE_MESSAGE(main_thread_func(&counter, &on, &semaphore) ==
+  TEST_ASSERT_TRUE_MESSAGE(main_thread_func(&counter, &on, semaphore, 0) ==
                                false,
                            "Main Thread still took the semaphore.");
 
@@ -59,7 +59,7 @@ void test_sideThread() {
   semaphore = xSemaphoreCreateCounting(1, 1);
   counter = 0;
 
-  TEST_ASSERT_TRUE_MESSAGE(side_thread_func(&counter, &semaphore) == true,
+  TEST_ASSERT_TRUE_MESSAGE(side_thread_func(&counter, semaphore, 0) == true,
                            "Side thread failed to take semaphore.");
 
   TEST_ASSERT_TRUE_MESSAGE(counter == 1,
@@ -73,7 +73,7 @@ void test_sideThreadSemaphore() {
   TEST_ASSERT_TRUE_MESSAGE(xSemaphoreTake(semaphore, 0) == pdTRUE,
                            "Tester failed to setup semaphore.");
 
-  TEST_ASSERT_TRUE_MESSAGE(side_thread_func(&counter, &semaphore) == false,
+  TEST_ASSERT_TRUE_MESSAGE(side_thread_func(&counter, semaphore, 0) == false,
                            "Side Thread still took the semaphore.");
 
   TEST_ASSERT_TRUE_MESSAGE(counter == 0,

@@ -20,7 +20,7 @@ SemaphoreHandle_t semaphore;
 
 void side_thread(void *params) {
   while (1) {
-    side_thread_func(&counter, &semaphore);
+    side_thread_func(&counter, semaphore, portMAX_DELAY);
 
     vTaskDelay(100);
   }
@@ -28,7 +28,7 @@ void side_thread(void *params) {
 
 void main_thread(void *params) {
   while (1) {
-    main_thread_func(&counter, &on, &semaphore);
+    main_thread_func(&counter, &on, semaphore, portMAX_DELAY);
 
     cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, on);
 
