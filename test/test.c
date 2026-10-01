@@ -6,8 +6,14 @@
 
 #include <FreeRTOS.h>
 #include <semphr.h>
+#include <task.h>
 
 #include "testedFuncs.h"
+
+// The runner gets the highest priority so it can preempt and inspect
+// any threads a test creates (needed for the deadlock tests).
+#define TEST_RUNNER_PRIORITY (tskIDLE_PRIORITY + 5UL)
+#define TEST_RUNNER_STACK_SIZE (configMINIMAL_STACK_SIZE * 4)
 
 int counter;
 int on;
@@ -93,10 +99,9 @@ void test_multiplication(void) {
       z == 5, "Multiplication of two integers returned incorrect value.");
 }
 
-int main(void) {
-  stdio_init_all();
+void runner_thread(void *params) {
   while (1) {
-    sleep_ms(5000); // Give time for TTY to attach.
+    vTaskDelay(pdMS_TO_TICKS(5000)); // Give time for TTY to attach.
     printf("Start tests\n");
     UNITY_BEGIN();
 
@@ -108,7 +113,15 @@ int main(void) {
 
     RUN_TEST(test_sideThread);
     RUN_TEST(test_sideThreadSemaphore);
-    sleep_ms(5000);
+    vTaskDelay(pdMS_TO_TICKS(5000));
     UNITY_END();
   }
+}
+
+int main(void) {
+  stdio_init_all();
+  xTaskCreate(runner_thread, "TestRunner", TEST_RUNNER_STACK_SIZE, NULL,
+              TEST_RUNNER_PRIORITY, NULL);
+  vTaskStartScheduler();
+  return 0;
 }
