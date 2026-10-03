@@ -17,9 +17,15 @@
 
 #define TEST_TIMEOUT_TICKS 10
 
+#define DEADLOCK_PRIORITY (tskIDLE_PRIORITY + 1UL)
+#define DEADLOCK_STACK_SIZE (configMINIMAL_STACK_SIZE * 4)
+
 int counter;
 int on;
 SemaphoreHandle_t semaphore;
+
+SemaphoreHandle_t semaphore_a;
+SemaphoreHandle_t semaphore_b;
 
 void setUp(void) {
   semaphore = xSemaphoreCreateCounting(1, 1);
@@ -119,6 +125,72 @@ void test_sideThreadTimeout() {
                                 "Side thread still incremented count.");
 }
 
+
+typedef struct {
+  SemaphoreHandle_t semaphore_a;
+  SemaphoreHandle_t semaphore_b;
+  TickType_t timeout;
+  uint8_t * state;
+} DeadlockConfig_t;
+
+void deadlock_thread(void *params) {
+
+  DeadlockConfig_t *config = (DeadlockConfig_t *)params;
+
+  xSemaphoreTake(config->semaphore_a, config->timeout);
+
+  vTaskDelay(100);
+
+  *(config->state) = 1;
+
+  xSemaphoreTake(config->semaphore_b, config->timeout);  
+
+  *(config->state) = 2;
+
+}
+
+void test_deadlock() {
+  semaphore_a = xSemaphoreCreateCounting(1, 1);
+  semaphore_b = xSemaphoreCreateCounting(1, 1);
+  TEST_ASSERT_NOT_NULL_MESSAGE(semaphore_a, "Failed to create semaphore.");
+  TEST_ASSERT_NOT_NULL_MESSAGE(semaphore_b, "Failed to create semaphore.");
+  
+  uint8_t state_a;
+  uint8_t state_b;
+
+  DeadlockConfig_t config_a = {
+    .state = &state_a,
+    .semaphore_a = semaphore_a,
+    .semaphore_b = semaphore_b,
+    .timeout = 1000
+  };
+
+  DeadlockConfig_t config_b = {
+    .state = &state_b,
+    .semaphore_a = semaphore_b,
+    .semaphore_b = semaphore_a,
+    .timeout = 1000
+  };
+
+  TaskHandle_t xDeadlock_a;
+  TaskHandle_t xDeadlock_b;
+
+  xTaskCreate(deadlock_thread, "Deadlock_a", DEADLOCK_STACK_SIZE, (void*)&config_a, DEADLOCK_PRIORITY, &xDeadlock_a);
+  xTaskCreate(deadlock_thread, "Deadlock_b", DEADLOCK_STACK_SIZE, (void*)&config_b, DEADLOCK_PRIORITY, &xDeadlock_b);
+
+  vTaskDelay(200);
+
+  vTaskDelete(xDeadlock_a);
+  vTaskDelete(xDeadlock_b);
+
+  TEST_ASSERT_TRUE_MESSAGE(state_a == 1, "Failed to create deadlock.");
+  TEST_ASSERT_TRUE_MESSAGE(state_b == 1, "Failed to create deadlock.");
+
+  vSemaphoreDelete(semaphore_a);
+  vSemaphoreDelete(semaphore_b);
+
+}
+
 void runner_thread(void *params) {
   while (1) {
     vTaskDelay(pdMS_TO_TICKS(5000)); // Give time for TTY to attach.
@@ -132,10 +204,16 @@ void runner_thread(void *params) {
     RUN_TEST(test_sideThread);
     RUN_TEST(test_sideThreadSemaphore);
     RUN_TEST(test_sideThreadTimeout);
+
+    RUN_TEST(test_deadlock);
+
     vTaskDelay(pdMS_TO_TICKS(5000));
     UNITY_END();
   }
 }
+
+
+
 
 int main(void) {
   stdio_init_all();
