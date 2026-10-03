@@ -146,6 +146,8 @@ void deadlock_thread(void *params) {
   xSemaphoreTake(config->semaphore_b, config->timeout);  
 
   *(config->state) = 2;
+  xSemaphoreGive(&semaphore_a);
+  xSemaphoreGive(&semaphore_b);
 
 }
 
@@ -191,6 +193,36 @@ void test_deadlock() {
 
 }
 
+void orphaned_lock(void)
+{
+    while (1) {
+        xSemaphoreTake(semaphore, portMAX_DELAY);
+        counter++;
+        if (counter % 2) {
+            continue;
+        }
+        //printk("Count %d\n", counter);
+        xSemaphoreGive(semaphore);
+    }
+    
+}
+
+void test_orphaned_lock(){
+
+  TaskHandle_t xOrphaned_lock;
+  xTaskCreate(orphaned_lock, "Orphaned_Lock", DEADLOCK_STACK_SIZE, NULL, DEADLOCK_PRIORITY, &xOrphaned_lock);
+
+  vTaskDelay(10);
+
+  bool result = xSemaphoreTake(semaphore, 100);
+
+  vTaskDelete(xOrphaned_lock);
+
+  TEST_ASSERT_FALSE_MESSAGE(result, "Orphaned Lock not created.");
+
+
+}
+
 void runner_thread(void *params) {
   while (1) {
     vTaskDelay(pdMS_TO_TICKS(5000)); // Give time for TTY to attach.
@@ -206,6 +238,7 @@ void runner_thread(void *params) {
     RUN_TEST(test_sideThreadTimeout);
 
     RUN_TEST(test_deadlock);
+    RUN_TEST(test_orphaned_lock);
 
     vTaskDelay(pdMS_TO_TICKS(5000));
     UNITY_END();
