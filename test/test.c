@@ -47,8 +47,9 @@ void test_mainThread() {
 
   TEST_ASSERT_EQUAL_INT_MESSAGE(1, on, "Main thread didn't toggle 'on'.");
 
-  TEST_ASSERT_EQUAL_INT_MESSAGE(1, uxSemaphoreGetCount(semaphore),
-                                "Main thread didn't release the semaphore.");
+  TEST_ASSERT_EQUAL_INT_MESSAGE(
+      1, uxSemaphoreGetCount(semaphore),
+      "Main thread didn't release the semaphore.");
 }
 
 void test_mainThreadSemaphore() {
@@ -73,7 +74,8 @@ void test_mainThreadTimeout() {
       main_thread_func(&counter, &on, semaphore, TEST_TIMEOUT_TICKS);
   TickType_t elapsed = xTaskGetTickCount() - start;
 
-  TEST_ASSERT_FALSE_MESSAGE(result, "Main Thread still took the semaphore.");
+  TEST_ASSERT_FALSE_MESSAGE(result,
+                            "Main Thread still took the semaphore.");
 
   TEST_ASSERT_GREATER_OR_EQUAL_UINT32_MESSAGE(
       TEST_TIMEOUT_TICKS, elapsed,
@@ -92,8 +94,9 @@ void test_sideThread() {
   TEST_ASSERT_EQUAL_INT_MESSAGE(1, counter,
                                 "Side thread didn't increment count.");
 
-  TEST_ASSERT_EQUAL_INT_MESSAGE(1, uxSemaphoreGetCount(semaphore),
-                                "Side thread didn't release the semaphore.");
+  TEST_ASSERT_EQUAL_INT_MESSAGE(
+      1, uxSemaphoreGetCount(semaphore),
+      "Side thread didn't release the semaphore.");
 }
 
 void test_sideThreadSemaphore() {
@@ -115,7 +118,8 @@ void test_sideThreadTimeout() {
   bool result = side_thread_func(&counter, semaphore, TEST_TIMEOUT_TICKS);
   TickType_t elapsed = xTaskGetTickCount() - start;
 
-  TEST_ASSERT_FALSE_MESSAGE(result, "Side Thread still took the semaphore.");
+  TEST_ASSERT_FALSE_MESSAGE(result,
+                            "Side Thread still took the semaphore.");
 
   TEST_ASSERT_GREATER_OR_EQUAL_UINT32_MESSAGE(
       TEST_TIMEOUT_TICKS, elapsed,
@@ -125,12 +129,11 @@ void test_sideThreadTimeout() {
                                 "Side thread still incremented count.");
 }
 
-
 typedef struct {
   SemaphoreHandle_t semaphore_a;
   SemaphoreHandle_t semaphore_b;
   TickType_t timeout;
-  uint8_t * state;
+  uint8_t *state;
 } DeadlockConfig_t;
 
 void deadlock_thread(void *params) {
@@ -143,12 +146,11 @@ void deadlock_thread(void *params) {
 
   *(config->state) = 1;
 
-  xSemaphoreTake(config->semaphore_b, config->timeout);  
+  xSemaphoreTake(config->semaphore_b, config->timeout);
 
   *(config->state) = 2;
   xSemaphoreGive(&semaphore_a);
   xSemaphoreGive(&semaphore_b);
-
 }
 
 void test_deadlock() {
@@ -156,29 +158,27 @@ void test_deadlock() {
   semaphore_b = xSemaphoreCreateCounting(1, 1);
   TEST_ASSERT_NOT_NULL_MESSAGE(semaphore_a, "Failed to create semaphore.");
   TEST_ASSERT_NOT_NULL_MESSAGE(semaphore_b, "Failed to create semaphore.");
-  
+
   uint8_t state_a;
   uint8_t state_b;
 
-  DeadlockConfig_t config_a = {
-    .state = &state_a,
-    .semaphore_a = semaphore_a,
-    .semaphore_b = semaphore_b,
-    .timeout = 1000
-  };
+  DeadlockConfig_t config_a = {.state = &state_a,
+                               .semaphore_a = semaphore_a,
+                               .semaphore_b = semaphore_b,
+                               .timeout = 1000};
 
-  DeadlockConfig_t config_b = {
-    .state = &state_b,
-    .semaphore_a = semaphore_b,
-    .semaphore_b = semaphore_a,
-    .timeout = 1000
-  };
+  DeadlockConfig_t config_b = {.state = &state_b,
+                               .semaphore_a = semaphore_b,
+                               .semaphore_b = semaphore_a,
+                               .timeout = 1000};
 
   TaskHandle_t xDeadlock_a;
   TaskHandle_t xDeadlock_b;
 
-  xTaskCreate(deadlock_thread, "Deadlock_a", DEADLOCK_STACK_SIZE, (void*)&config_a, DEADLOCK_PRIORITY, &xDeadlock_a);
-  xTaskCreate(deadlock_thread, "Deadlock_b", DEADLOCK_STACK_SIZE, (void*)&config_b, DEADLOCK_PRIORITY, &xDeadlock_b);
+  xTaskCreate(deadlock_thread, "Deadlock_a", DEADLOCK_STACK_SIZE,
+              (void *)&config_a, DEADLOCK_PRIORITY, &xDeadlock_a);
+  xTaskCreate(deadlock_thread, "Deadlock_b", DEADLOCK_STACK_SIZE,
+              (void *)&config_b, DEADLOCK_PRIORITY, &xDeadlock_b);
 
   vTaskDelay(200);
 
@@ -190,40 +190,38 @@ void test_deadlock() {
 
   vSemaphoreDelete(semaphore_a);
   vSemaphoreDelete(semaphore_b);
-
 }
 
-void orphaned_lock(void)
-{
-    while (1) {
-        xSemaphoreTake(semaphore, portMAX_DELAY);
-        counter++;
-        if (counter % 2) {
-            continue;
-        }
-        //printk("Count %d\n", counter);
-        xSemaphoreGive(semaphore);
-    }   
+void orphaned_lock() {
+  while (1) {
+    xSemaphoreTake(semaphore, portMAX_DELAY);
+    counter++;
+    if (counter % 2) {
+      continue;
+    }
+    // printk("Count %d\n", counter);
+    xSemaphoreGive(semaphore);
+  }
 }
 
-void non_orphaned_lock(void)
-{
-    while (1) {
-        xSemaphoreTake(semaphore, portMAX_DELAY);
-        counter++;
-        if (counter % 2) {
-            xSemaphoreGive(semaphore);
-            continue;
-        }
-        //printk("Count %d\n", counter);
-        xSemaphoreGive(semaphore);
-    }   
+void non_orphaned_lock() {
+  while (1) {
+    xSemaphoreTake(semaphore, portMAX_DELAY);
+    counter++;
+    if (counter % 2) {
+      xSemaphoreGive(semaphore);
+      continue;
+    }
+    // printk("Count %d\n", counter);
+    xSemaphoreGive(semaphore);
+  }
 }
 
-void test_orphaned_lock(){
+void test_orphaned_lock() {
 
   TaskHandle_t xOrphaned_lock;
-  xTaskCreate(orphaned_lock, "Orphaned_Lock", DEADLOCK_STACK_SIZE, NULL, DEADLOCK_PRIORITY, &xOrphaned_lock);
+  xTaskCreate(orphaned_lock, "Orphaned_Lock", DEADLOCK_STACK_SIZE, NULL,
+              DEADLOCK_PRIORITY, &xOrphaned_lock);
 
   vTaskDelay(10);
 
@@ -232,13 +230,13 @@ void test_orphaned_lock(){
   vTaskDelete(xOrphaned_lock);
 
   TEST_ASSERT_FALSE_MESSAGE(result, "Orphaned Lock not created.");
-
 }
 
-void test_non_orphaned_lock(){
+void test_non_orphaned_lock() {
 
   TaskHandle_t xOrphaned_lock;
-  xTaskCreate(non_orphaned_lock, "Orphaned_Lock", DEADLOCK_STACK_SIZE, NULL, DEADLOCK_PRIORITY, &xOrphaned_lock);
+  xTaskCreate(non_orphaned_lock, "Orphaned_Lock", DEADLOCK_STACK_SIZE,
+              NULL, DEADLOCK_PRIORITY, &xOrphaned_lock);
 
   vTaskDelay(10);
 
@@ -247,7 +245,6 @@ void test_non_orphaned_lock(){
   vTaskDelete(xOrphaned_lock);
 
   TEST_ASSERT_TRUE_MESSAGE(result, "Orphaned lock created.");
-
 }
 
 void runner_thread(void *params) {
@@ -272,9 +269,6 @@ void runner_thread(void *params) {
     UNITY_END();
   }
 }
-
-
-
 
 int main(void) {
   stdio_init_all();
